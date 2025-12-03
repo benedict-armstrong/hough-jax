@@ -1,6 +1,6 @@
 [project]
 name = "hough-jax"
-version = "0.1.0"
+dynamic = ["version"]
 description = "JAX implementation of the probabilistic Hough transform for lines"
 readme = "README.md"
 requires-python = ">=3.12"
