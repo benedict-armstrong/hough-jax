@@ -1,5 +1,5 @@
 [project]
-name = "jax-probabilistic-hough-line"
+name = "hough-jax"
 version = "0.1.0"
 description = "JAX implementation of the probabilistic Hough transform for lines"
 readme = "README.md"
