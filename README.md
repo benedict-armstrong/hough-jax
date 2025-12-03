@@ -1,4 +1,4 @@
-# JAX implementation of the `skimage.transform.probabilistic_hough_line`
+# JAX implementation of `probabilistic_hough_line`
 
 This is a JAX implementation of the `skimage.transform.probabilistic_hough_line` function.
 
