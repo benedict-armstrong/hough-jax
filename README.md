@@ -40,3 +40,20 @@ lines, nlines = probabilistic_hough_line(
 print(f"Detected {int(nlines)} line(s)")
 print(f"First line endpoints: {lines[0]}")
 ```
+
+### Converting to skimage format
+
+To get the same output format as `skimage.transform.probabilistic_hough_line`:
+
+```python
+def to_skimage_format(lines, nlines):
+    """Convert JAX output to list of ((x0, y0), (x1, y1)) tuples."""
+    n = int(nlines)
+    return [
+        ((int(lines[i, 0, 0]), int(lines[i, 0, 1])), (int(lines[i, 1, 0]), int(lines[i, 1, 1])))
+        for i in range(n)
+    ]
+
+skimage_lines = to_skimage_format(lines, nlines)
+# [((79, 50), (20, 50))]
+```
