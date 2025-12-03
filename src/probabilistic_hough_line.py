@@ -1,8 +1,11 @@
+"""JAX implementation of the probabilistic Hough line transform."""
+
+from typing import Optional
+
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array
-from typing import Optional
 import numpy as np
+from jaxtyping import Array, Float
 
 
 def _probabilistic_hough_line_impl(
@@ -10,13 +13,12 @@ def _probabilistic_hough_line_impl(
     threshold: int,
     line_length: int,
     line_gap: int,
-    theta: Float[Array, "K"],
+    theta: Float[Array, " num_theta"],
     rng: jax.Array,
     height: int,
     width: int,
 ):
-    """
-    JIT-compatible implementation of probabilistic Hough transform.
+    """JIT-compatible implementation of probabilistic Hough transform.
 
     Returns (lines, nlines) where lines is a (lines_max, 2, 2) array
     and nlines is the number of valid lines.
@@ -263,11 +265,10 @@ def probabilistic_hough_line(
     threshold: int = 10,
     line_length: int = 50,
     line_gap: int = 10,
-    theta: Optional[Float[Array, "K"]] = None,
+    theta: Optional[Float[Array, " num_theta"]] = None,
     rng: Optional[jax.Array] = None,
 ) -> list:
-    """
-    Compute the probabilistic Hough transform for lines in an image.
+    """Compute the probabilistic Hough transform for lines in an image.
 
     Args:
         image: The input image with nonzero values representing edges.

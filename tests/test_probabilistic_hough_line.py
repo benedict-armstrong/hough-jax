@@ -1,253 +1,26 @@
-import numpy as np
-import jax.numpy as jnp
+"""Tests for the probabilistic Hough line transform."""
+
 import jax
+import jax.numpy as jnp
+import numpy as np
 import pytest
 from skimage.transform import probabilistic_hough_line as skimage_hough
-from src.probabilistic_hough_line import probabilistic_hough_line as jax_hough
 from src.probabilistic_hough_line import _probabilistic_hough_line_impl
+from src.probabilistic_hough_line import probabilistic_hough_line as jax_hough
 
 
-def lines_match(jax_lines, skimage_lines, tolerance=1):
-    """Check if two sets of lines match within tolerance."""
+def lines_match(jax_lines, skimage_lines):
+    """Check if two sets of lines match."""
     if len(jax_lines) != len(skimage_lines):
         return False
 
-    # Convert to sets of sorted tuples for comparison
     def normalize_line(line):
         (x0, y0), (x1, y1) = line
-        # Sort endpoints to make comparison order-independent
         if (x0, y0) > (x1, y1):
             return ((x1, y1), (x0, y0))
         return ((x0, y0), (x1, y1))
 
-    jax_set = set(normalize_line(l) for l in jax_lines)
-    skimage_set = set(normalize_line(l) for l in skimage_lines)
-
-    return jax_set == skimage_set
-
-
-def create_test_image_horizontal_line():
-    """Create a simple image with a horizontal line."""
-    img = np.zeros((100, 100), dtype=np.uint8)
-    img[50, 20:80] = 1
-    return img
-
-
-def create_test_image_vertical_line():
-    """Create a simple image with a vertical line."""
-    img = np.zeros((100, 100), dtype=np.uint8)
-    img[20:80, 50] = 1
-    return img
-
-
-def create_test_image_diagonal_line():
-    """Create a simple image with a diagonal line."""
-    img = np.zeros((100, 100), dtype=np.uint8)
-    for i in range(60):
-        img[20 + i, 20 + i] = 1
-    return img
-
-
-def create_test_image_multiple_lines():
-    """Create an image with multiple lines."""
-    img = np.zeros((100, 100), dtype=np.uint8)
-    # Horizontal line
-    img[30, 10:90] = 1
-    # Vertical line
-    img[10:90, 70] = 1
-    # Diagonal line
-    for i in range(50):
-        img[40 + i, 10 + i] = 1
-    return img
-
-
-class TestProbabilisticHoughLine:
-    """Tests for JAX probabilistic Hough line transform."""
-
-    def test_horizontal_line(self):
-        """Test detection of a horizontal line."""
-        img = create_test_image_horizontal_line()
-        seed = 42
-
-        # Run skimage version
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
-
-        # Run JAX version
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        assert len(jax_lines) == len(skimage_lines), (
-            f"Expected {len(skimage_lines)} lines, got {len(jax_lines)}"
-        )
-        assert lines_match(jax_lines, skimage_lines)
-
-    def test_vertical_line(self):
-        """Test detection of a vertical line."""
-        img = create_test_image_vertical_line()
-        seed = 42
-
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
-
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        assert len(jax_lines) == len(skimage_lines)
-        assert lines_match(jax_lines, skimage_lines)
-
-    def test_diagonal_line(self):
-        """Test detection of a diagonal line."""
-        img = create_test_image_diagonal_line()
-        seed = 42
-
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
-
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        assert len(jax_lines) == len(skimage_lines)
-        assert lines_match(jax_lines, skimage_lines)
-
-    def test_multiple_lines(self):
-        """Test detection of multiple lines."""
-        img = create_test_image_multiple_lines()
-        seed = 42
-
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
-
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        assert len(jax_lines) == len(skimage_lines)
-        assert lines_match(jax_lines, skimage_lines)
-
-    def test_empty_image(self):
-        """Test with an empty image (no edges)."""
-        img = np.zeros((50, 50), dtype=np.uint8)
-
-        rng_np = np.random.default_rng(42)
-        skimage_lines = skimage_hough(img, rng=rng_np)
-
-        rng_jax = jax.random.PRNGKey(42)
-        jax_lines = jax_hough(jnp.array(img), rng=rng_jax)
-
-        assert len(jax_lines) == 0
-        assert len(skimage_lines) == 0
-
-    def test_default_theta(self):
-        """Test that default theta values work correctly."""
-        img = create_test_image_horizontal_line()
-        seed = 42
-
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
-
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        assert len(jax_lines) == len(skimage_lines)
-
-    def test_custom_theta(self):
-        """Test with custom theta values."""
-        img = create_test_image_horizontal_line()
-        seed = 42
-        theta = np.linspace(-np.pi / 2, np.pi / 2, 90, endpoint=False)
-
-        rng_np = np.random.default_rng(seed)
-        skimage_lines = skimage_hough(
-            img, threshold=10, line_length=30, line_gap=3, theta=theta, rng=rng_np
-        )
-
-        rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
-            jnp.array(img),
-            threshold=10,
-            line_length=30,
-            line_gap=3,
-            theta=jnp.array(theta),
-            rng=rng_jax,
-        )
-
-        assert len(jax_lines) == len(skimage_lines)
-        assert lines_match(jax_lines, skimage_lines)
-
-    def test_different_thresholds(self):
-        """Test with different threshold values."""
-        img = create_test_image_multiple_lines()
-        seed = 42
-
-        for threshold in [5, 10, 20]:
-            rng_np = np.random.default_rng(seed)
-            skimage_lines = skimage_hough(
-                img, threshold=threshold, line_length=30, line_gap=3, rng=rng_np
-            )
-
-            rng_jax = jax.random.PRNGKey(seed)
-            jax_lines = jax_hough(
-                jnp.array(img),
-                threshold=threshold,
-                line_length=30,
-                line_gap=3,
-                rng=rng_jax,
-            )
-
-            assert len(jax_lines) == len(skimage_lines), (
-                f"Threshold {threshold}: expected {len(skimage_lines)}, got {len(jax_lines)}"
-            )
-
-    def test_different_line_lengths(self):
-        """Test with different minimum line length values."""
-        img = create_test_image_horizontal_line()
-        seed = 42
-
-        for line_length in [20, 40, 60]:
-            rng_np = np.random.default_rng(seed)
-            skimage_lines = skimage_hough(
-                img, threshold=10, line_length=line_length, line_gap=3, rng=rng_np
-            )
-
-            rng_jax = jax.random.PRNGKey(seed)
-            jax_lines = jax_hough(
-                jnp.array(img),
-                threshold=10,
-                line_length=line_length,
-                line_gap=3,
-                rng=rng_jax,
-            )
-
-            assert len(jax_lines) == len(skimage_lines), (
-                f"Line length {line_length}: expected {len(skimage_lines)}, got {len(jax_lines)}"
-            )
-
-    def test_output_format(self):
-        """Test that output format matches skimage format."""
-        img = create_test_image_horizontal_line()
-
-        rng_jax = jax.random.PRNGKey(42)
-        jax_lines = jax_hough(
-            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
-        )
-
-        # Check output format: list of ((x0, y0), (x1, y1))
-        assert isinstance(jax_lines, list)
-        if len(jax_lines) > 0:
-            line = jax_lines[0]
-            assert len(line) == 2  # Two endpoints
-            assert len(line[0]) == 2  # (x0, y0)
-            assert len(line[1]) == 2  # (x1, y1)
+    return {normalize_line(l) for l in jax_lines} == {normalize_line(l) for l in skimage_lines}
 
 
 def jit_result_to_lines(lines_result, nlines_result):
@@ -260,166 +33,288 @@ def jit_result_to_lines(lines_result, nlines_result):
     ]
 
 
-class TestProbabilisticHoughLineJIT:
-    """Tests for JIT-compiled JAX probabilistic Hough line transform."""
+@pytest.fixture
+def horizontal_line():
+    """Create a 100x100 image with a horizontal line."""
+    img = np.zeros((100, 100), dtype=np.uint8)
+    img[50, 20:80] = 1
+    return img
 
-    @pytest.fixture
-    def jit_hough_impl(self):
-        """Create a JIT-compiled version of the Hough transform implementation."""
-        return jax.jit(
-            _probabilistic_hough_line_impl,
-            static_argnames=["threshold", "line_length", "line_gap", "height", "width"],
-        )
 
-    def test_jit_horizontal_line(self, jit_hough_impl):
-        """Test JIT-compiled detection of a horizontal line."""
-        img = create_test_image_horizontal_line()
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        rng = jax.random.PRNGKey(42)
-        height, width = img.shape
+@pytest.fixture
+def vertical_line():
+    """Create a 100x100 image with a vertical line."""
+    img = np.zeros((100, 100), dtype=np.uint8)
+    img[20:80, 50] = 1
+    return img
 
-        # Run eager version
-        eager_lines = jax_hough(jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng)
 
-        # Run JIT version
-        lines_result, nlines_result = jit_hough_impl(
-            jnp.array(img), 10, 30, 3, theta, rng, height, width
-        )
-        jit_lines = jit_result_to_lines(lines_result, nlines_result)
+@pytest.fixture
+def diagonal_line():
+    """Create a 100x100 image with a diagonal line."""
+    img = np.zeros((100, 100), dtype=np.uint8)
+    for i in range(60):
+        img[20 + i, 20 + i] = 1
+    return img
 
-        assert len(jit_lines) == len(eager_lines)
-        assert lines_match(jit_lines, eager_lines)
 
-    def test_jit_multiple_lines(self, jit_hough_impl):
-        """Test JIT-compiled detection of multiple lines."""
-        img = create_test_image_multiple_lines()
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        rng = jax.random.PRNGKey(42)
-        height, width = img.shape
+@pytest.fixture
+def multiple_lines():
+    """Create a 100x100 image with multiple lines."""
+    img = np.zeros((100, 100), dtype=np.uint8)
+    img[30, 10:90] = 1
+    img[10:90, 70] = 1
+    for i in range(50):
+        img[40 + i, 10 + i] = 1
+    return img
 
-        eager_lines = jax_hough(jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng)
 
-        lines_result, nlines_result = jit_hough_impl(
-            jnp.array(img), 10, 30, 3, theta, rng, height, width
-        )
-        jit_lines = jit_result_to_lines(lines_result, nlines_result)
+@pytest.fixture
+def empty_image():
+    """Create a 50x50 empty image."""
+    return np.zeros((50, 50), dtype=np.uint8)
 
-        assert len(jit_lines) == len(eager_lines)
-        assert lines_match(jit_lines, eager_lines)
 
-    def test_jit_recompilation_different_params(self, jit_hough_impl):
-        """Test JIT recompilation with different static parameters."""
-        img = create_test_image_horizontal_line()
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        rng = jax.random.PRNGKey(42)
-        height, width = img.shape
+@pytest.fixture
+def jit_hough_impl():
+    """JIT-compiled version of the Hough transform."""
+    return jax.jit(
+        _probabilistic_hough_line_impl,
+        static_argnames=["threshold", "line_length", "line_gap", "height", "width"],
+    )
 
-        # First call with one set of params
-        lines1_result, nlines1 = jit_hough_impl(
-            jnp.array(img), 10, 30, 3, theta, rng, height, width
-        )
-        lines1 = jit_result_to_lines(lines1_result, nlines1)
 
-        # Second call with different params (triggers recompilation)
-        lines2_result, nlines2 = jit_hough_impl(
-            jnp.array(img), 5, 20, 5, theta, rng, height, width
-        )
-        lines2 = jit_result_to_lines(lines2_result, nlines2)
+class TestProbabilisticHoughLine:
+    """Tests for JAX probabilistic Hough line transform."""
 
-        # Both should produce valid results
-        assert isinstance(lines1, list)
-        assert isinstance(lines2, list)
-
-    def test_jit_different_image_sizes(self, jit_hough_impl):
-        """Test JIT with different image sizes."""
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        rng = jax.random.PRNGKey(42)
-
-        # Small image
-        img_small = np.zeros((50, 50), dtype=np.uint8)
-        img_small[25, 10:40] = 1
-        lines_result, nlines = jit_hough_impl(jnp.array(img_small), 10, 20, 3, theta, rng, 50, 50)
-        lines_small = jit_result_to_lines(lines_result, nlines)
-
-        # Larger image
-        img_large = np.zeros((150, 150), dtype=np.uint8)
-        img_large[75, 20:130] = 1
-        lines_result, nlines = jit_hough_impl(
-            jnp.array(img_large), 10, 50, 3, theta, rng, 150, 150
-        )
-        lines_large = jit_result_to_lines(lines_result, nlines)
-
-        assert len(lines_small) >= 0
-        assert len(lines_large) >= 0
-
-    def test_jit_consistency_multiple_calls(self, jit_hough_impl):
-        """Test that JIT produces consistent results across multiple calls."""
-        img = create_test_image_horizontal_line()
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        rng = jax.random.PRNGKey(42)
-        height, width = img.shape
-
-        # Run multiple times with same inputs
-        results = []
-        for _ in range(3):
-            lines_result, nlines = jit_hough_impl(
-                jnp.array(img), 10, 30, 3, theta, rng, height, width
-            )
-            lines = jit_result_to_lines(lines_result, nlines)
-            results.append(lines)
-
-        # All results should be identical
-        for i in range(1, len(results)):
-            assert len(results[i]) == len(results[0])
-            assert lines_match(results[i], results[0])
-
-    def test_jit_vs_skimage(self, jit_hough_impl):
-        """Test JIT-compiled version against skimage reference."""
-        img = create_test_image_diagonal_line()
+    @pytest.mark.parametrize(
+        "image_fixture", ["horizontal_line", "vertical_line", "diagonal_line", "multiple_lines"]
+    )
+    def test_line_detection(self, image_fixture, request):
+        """Test line detection matches skimage for various line types."""
+        img = request.getfixturevalue(image_fixture)
         seed = 42
-        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
-        height, width = img.shape
 
         rng_np = np.random.default_rng(seed)
         skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
 
         rng_jax = jax.random.PRNGKey(seed)
+        jax_lines = jax_hough(
+            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
+        )
+
+        assert len(jax_lines) == len(skimage_lines)
+        assert lines_match(jax_lines, skimage_lines)
+
+    def test_empty_image(self, empty_image):
+        """Test with an empty image (no edges)."""
+        rng_np = np.random.default_rng(42)
+        skimage_lines = skimage_hough(empty_image, rng=rng_np)
+
+        rng_jax = jax.random.PRNGKey(42)
+        jax_lines = jax_hough(jnp.array(empty_image), rng=rng_jax)
+
+        assert len(jax_lines) == 0
+        assert len(skimage_lines) == 0
+
+    def test_custom_theta(self, horizontal_line):
+        """Test with custom theta values."""
+        theta = np.linspace(-np.pi / 2, np.pi / 2, 90, endpoint=False)
+        seed = 42
+
+        rng_np = np.random.default_rng(seed)
+        skimage_lines = skimage_hough(
+            horizontal_line, threshold=10, line_length=30, line_gap=3, theta=theta, rng=rng_np
+        )
+
+        rng_jax = jax.random.PRNGKey(seed)
+        jax_lines = jax_hough(
+            jnp.array(horizontal_line),
+            threshold=10,
+            line_length=30,
+            line_gap=3,
+            theta=jnp.array(theta),
+            rng=rng_jax,
+        )
+
+        assert len(jax_lines) == len(skimage_lines)
+        assert lines_match(jax_lines, skimage_lines)
+
+    @pytest.mark.parametrize("threshold", [5, 10, 20])
+    def test_different_thresholds(self, multiple_lines, threshold):
+        """Test with different threshold values."""
+        seed = 42
+
+        rng_np = np.random.default_rng(seed)
+        skimage_lines = skimage_hough(
+            multiple_lines, threshold=threshold, line_length=30, line_gap=3, rng=rng_np
+        )
+
+        rng_jax = jax.random.PRNGKey(seed)
+        jax_lines = jax_hough(
+            jnp.array(multiple_lines), threshold=threshold, line_length=30, line_gap=3, rng=rng_jax
+        )
+
+        assert len(jax_lines) == len(skimage_lines)
+
+    @pytest.mark.parametrize("line_length", [20, 40, 60])
+    def test_different_line_lengths(self, horizontal_line, line_length):
+        """Test with different minimum line length values."""
+        seed = 42
+
+        rng_np = np.random.default_rng(seed)
+        skimage_lines = skimage_hough(
+            horizontal_line, threshold=10, line_length=line_length, line_gap=3, rng=rng_np
+        )
+
+        rng_jax = jax.random.PRNGKey(seed)
+        jax_lines = jax_hough(
+            jnp.array(horizontal_line),
+            threshold=10,
+            line_length=line_length,
+            line_gap=3,
+            rng=rng_jax,
+        )
+
+        assert len(jax_lines) == len(skimage_lines)
+
+    def test_output_format(self, horizontal_line):
+        """Test that output format matches skimage format."""
+        rng_jax = jax.random.PRNGKey(42)
+        jax_lines = jax_hough(
+            jnp.array(horizontal_line), threshold=10, line_length=30, line_gap=3, rng=rng_jax
+        )
+
+        assert isinstance(jax_lines, list)
+        if len(jax_lines) > 0:
+            line = jax_lines[0]
+            assert len(line) == 2
+            assert len(line[0]) == 2
+            assert len(line[1]) == 2
+
+
+class TestProbabilisticHoughLineJIT:
+    """Tests for JIT-compiled JAX probabilistic Hough line transform."""
+
+    @pytest.mark.parametrize(
+        "image_fixture", ["horizontal_line", "multiple_lines", "diagonal_line"]
+    )
+    def test_jit_matches_eager(self, image_fixture, request, jit_hough_impl):
+        """Test JIT output matches eager mode for various line types."""
+        img = request.getfixturevalue(image_fixture)
+        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
+        rng = jax.random.PRNGKey(42)
+        height, width = img.shape
+
+        eager_lines = jax_hough(jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng)
+        lines_result, nlines_result = jit_hough_impl(
+            jnp.array(img), 10, 30, 3, theta, rng, height, width
+        )
+        jit_lines = jit_result_to_lines(lines_result, nlines_result)
+
+        assert len(jit_lines) == len(eager_lines)
+        assert lines_match(jit_lines, eager_lines)
+
+    def test_jit_vs_skimage(self, diagonal_line, jit_hough_impl):
+        """Test JIT-compiled version against skimage reference."""
+        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
+        height, width = diagonal_line.shape
+        seed = 42
+
+        rng_np = np.random.default_rng(seed)
+        skimage_lines = skimage_hough(
+            diagonal_line, threshold=10, line_length=30, line_gap=3, rng=rng_np
+        )
+
+        rng_jax = jax.random.PRNGKey(seed)
         lines_result, nlines = jit_hough_impl(
-            jnp.array(img), 10, 30, 3, theta, rng_jax, height, width
+            jnp.array(diagonal_line), 10, 30, 3, theta, rng_jax, height, width
         )
         jit_lines = jit_result_to_lines(lines_result, nlines)
 
         assert len(jit_lines) == len(skimage_lines)
         assert lines_match(jit_lines, skimage_lines)
 
-    def test_jit_empty_image(self, jit_hough_impl):
+    def test_jit_empty_image(self, empty_image, jit_hough_impl):
         """Test JIT with empty image."""
-        img = np.zeros((50, 50), dtype=np.uint8)
         theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
         rng = jax.random.PRNGKey(42)
+        height, width = empty_image.shape
 
-        lines_result, nlines = jit_hough_impl(jnp.array(img), 10, 30, 3, theta, rng, 50, 50)
+        lines_result, nlines = jit_hough_impl(
+            jnp.array(empty_image), 10, 30, 3, theta, rng, height, width
+        )
         lines = jit_result_to_lines(lines_result, nlines)
 
         assert len(lines) == 0
 
-    def test_jit_custom_theta(self, jit_hough_impl):
+    def test_jit_recompilation(self, horizontal_line, jit_hough_impl):
+        """Test JIT recompilation with different static parameters."""
+        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
+        rng = jax.random.PRNGKey(42)
+        height, width = horizontal_line.shape
+
+        lines1_result, nlines1 = jit_hough_impl(
+            jnp.array(horizontal_line), 10, 30, 3, theta, rng, height, width
+        )
+        lines2_result, nlines2 = jit_hough_impl(
+            jnp.array(horizontal_line), 5, 20, 5, theta, rng, height, width
+        )
+
+        assert isinstance(jit_result_to_lines(lines1_result, nlines1), list)
+        assert isinstance(jit_result_to_lines(lines2_result, nlines2), list)
+
+    @pytest.mark.parametrize(
+        "size,line_slice,line_length", [(50, slice(10, 40), 20), (150, slice(20, 130), 50)]
+    )
+    def test_jit_different_image_sizes(self, size, line_slice, line_length, jit_hough_impl):
+        """Test JIT with different image sizes."""
+        img = np.zeros((size, size), dtype=np.uint8)
+        img[size // 2, line_slice] = 1
+        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
+        rng = jax.random.PRNGKey(42)
+
+        lines_result, nlines = jit_hough_impl(
+            jnp.array(img), 10, line_length, 3, theta, rng, size, size
+        )
+        lines = jit_result_to_lines(lines_result, nlines)
+
+        assert len(lines) >= 0
+
+    def test_jit_consistency(self, horizontal_line, jit_hough_impl):
+        """Test that JIT produces consistent results across multiple calls."""
+        theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 180, endpoint=False)
+        rng = jax.random.PRNGKey(42)
+        height, width = horizontal_line.shape
+
+        results = [
+            jit_result_to_lines(
+                *jit_hough_impl(jnp.array(horizontal_line), 10, 30, 3, theta, rng, height, width)
+            )
+            for _ in range(3)
+        ]
+
+        for i in range(1, len(results)):
+            assert len(results[i]) == len(results[0])
+            assert lines_match(results[i], results[0])
+
+    def test_jit_custom_theta(self, horizontal_line, jit_hough_impl):
         """Test JIT with custom theta values."""
-        img = create_test_image_horizontal_line()
         theta = jnp.linspace(-jnp.pi / 2, jnp.pi / 2, 90, endpoint=False)
         rng = jax.random.PRNGKey(42)
-        height, width = img.shape
+        height, width = horizontal_line.shape
 
         eager_lines = jax_hough(
-            jnp.array(img),
+            jnp.array(horizontal_line),
             threshold=10,
             line_length=30,
             line_gap=3,
             theta=theta,
             rng=rng,
         )
-
-        lines_result, nlines = jit_hough_impl(jnp.array(img), 10, 30, 3, theta, rng, height, width)
+        lines_result, nlines = jit_hough_impl(
+            jnp.array(horizontal_line), 10, 30, 3, theta, rng, height, width
+        )
         jit_lines = jit_result_to_lines(lines_result, nlines)
 
         assert len(jit_lines) == len(eager_lines)
