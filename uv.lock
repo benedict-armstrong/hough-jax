@@ -43,6 +43,34 @@ wheels = [
 ]
 
 [[package]]
+name = "hough-jax"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "jax" },
+    { name = "jaxtyping" },
+    { name = "scikit-image" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jax", specifier = ">=0.8.1" },
+    { name = "jaxtyping", specifier = ">=0.3.3" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.11" },
+    { name = "scikit-image", specifier = ">=0.25.2" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "identify"
 version = "2.6.15"
 source = { registry = "https://pypi.org/simple" }
@@ -88,34 +116,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/32/82/84fd2c662e4d410a3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/e7/19b8cfc8963b2e10a01a4db7bb27ec5fa39ecd024bc62f8e2d1de5625a9d/jax-0.8.1-py3-none-any.whl", hash = "sha256:4cbdc5548f3095cdd69d38e4337950b2fc1f250a740a0234d190e4a319077564", size = 2922137, upload-time = "2025-11-18T19:47:43.693Z" },
 ]
-
-[[package]]
-name = "jax-probabilistic-hough-line"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "jax" },
-    { name = "jaxtyping" },
-    { name = "scikit-image" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "jax", specifier = ">=0.8.1" },
-    { name = "jaxtyping", specifier = ">=0.3.3" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.11" },
-    { name = "scikit-image", specifier = ">=0.25.2" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "jaxlib"

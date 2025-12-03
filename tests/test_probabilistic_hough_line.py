@@ -4,9 +4,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from hough_jax import _probabilistic_hough_line_impl
+from hough_jax import probabilistic_hough_line as jax_hough
 from skimage.transform import probabilistic_hough_line as skimage_hough
-from src.probabilistic_hough_line import _probabilistic_hough_line_impl
-from src.probabilistic_hough_line import probabilistic_hough_line as jax_hough
 
 
 def lines_match(jax_lines, skimage_lines):
