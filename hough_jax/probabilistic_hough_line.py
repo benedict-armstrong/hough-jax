@@ -267,7 +267,7 @@ def probabilistic_hough_line(
     line_gap: int = 10,
     theta: Optional[Float[Array, " num_theta"]] = None,
     rng: Optional[jax.Array] = None,
-) -> list:
+) -> tuple[Float[Array, "lines_max 2 2"], Float[Array, ""]]:
     """Compute the probabilistic Hough transform for lines in an image.
 
     Args:
@@ -279,7 +279,10 @@ def probabilistic_hough_line(
         rng: JAX random key.
 
     Returns:
-        List of lines in format ((x0, y0), (x1, y1)).
+        A tuple (lines, nlines) where:
+        - lines: Array of shape (lines_max, 2, 2) containing line endpoints
+          in format [[x0, y0], [x1, y1]]. Only the first nlines entries are valid.
+        - nlines: Scalar indicating the number of valid lines detected.
     """
     if image.ndim != 2:
         raise ValueError("The input image must be 2D.")
@@ -291,15 +294,6 @@ def probabilistic_hough_line(
         rng = jax.random.PRNGKey(0)
 
     height, width = image.shape
-    lines_result, nlines_result = _probabilistic_hough_line_impl(
+    return _probabilistic_hough_line_impl(
         image, threshold, line_length, line_gap, theta, rng, height, width
     )
-
-    # Convert to list of tuples
-    nlines_int = int(nlines_result)
-    lines_np = np.array(lines_result[:nlines_int])
-
-    return [
-        ((int(line[0, 0]), int(line[0, 1])), (int(line[1, 0]), int(line[1, 1])))
-        for line in lines_np
-    ]

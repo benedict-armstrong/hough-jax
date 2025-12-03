@@ -99,9 +99,10 @@ class TestProbabilisticHoughLine:
         skimage_lines = skimage_hough(img, threshold=10, line_length=30, line_gap=3, rng=rng_np)
 
         rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
+        lines_result, nlines_result = jax_hough(
             jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng_jax
         )
+        jax_lines = jit_result_to_lines(lines_result, nlines_result)
 
         assert len(jax_lines) == len(skimage_lines)
         assert lines_match(jax_lines, skimage_lines)
@@ -112,7 +113,8 @@ class TestProbabilisticHoughLine:
         skimage_lines = skimage_hough(empty_image, rng=rng_np)
 
         rng_jax = jax.random.PRNGKey(42)
-        jax_lines = jax_hough(jnp.array(empty_image), rng=rng_jax)
+        lines_result, nlines_result = jax_hough(jnp.array(empty_image), rng=rng_jax)
+        jax_lines = jit_result_to_lines(lines_result, nlines_result)
 
         assert len(jax_lines) == 0
         assert len(skimage_lines) == 0
@@ -128,7 +130,7 @@ class TestProbabilisticHoughLine:
         )
 
         rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
+        lines_result, nlines_result = jax_hough(
             jnp.array(horizontal_line),
             threshold=10,
             line_length=30,
@@ -136,6 +138,7 @@ class TestProbabilisticHoughLine:
             theta=jnp.array(theta),
             rng=rng_jax,
         )
+        jax_lines = jit_result_to_lines(lines_result, nlines_result)
 
         assert len(jax_lines) == len(skimage_lines)
         assert lines_match(jax_lines, skimage_lines)
@@ -151,9 +154,10 @@ class TestProbabilisticHoughLine:
         )
 
         rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
+        lines_result, nlines_result = jax_hough(
             jnp.array(multiple_lines), threshold=threshold, line_length=30, line_gap=3, rng=rng_jax
         )
+        jax_lines = jit_result_to_lines(lines_result, nlines_result)
 
         assert len(jax_lines) == len(skimage_lines)
 
@@ -168,29 +172,30 @@ class TestProbabilisticHoughLine:
         )
 
         rng_jax = jax.random.PRNGKey(seed)
-        jax_lines = jax_hough(
+        lines_result, nlines_result = jax_hough(
             jnp.array(horizontal_line),
             threshold=10,
             line_length=line_length,
             line_gap=3,
             rng=rng_jax,
         )
+        jax_lines = jit_result_to_lines(lines_result, nlines_result)
 
         assert len(jax_lines) == len(skimage_lines)
 
     def test_output_format(self, horizontal_line):
-        """Test that output format matches skimage format."""
+        """Test that output format is a tuple of (lines_array, nlines)."""
         rng_jax = jax.random.PRNGKey(42)
-        jax_lines = jax_hough(
+        result = jax_hough(
             jnp.array(horizontal_line), threshold=10, line_length=30, line_gap=3, rng=rng_jax
         )
 
-        assert isinstance(jax_lines, list)
-        if len(jax_lines) > 0:
-            line = jax_lines[0]
-            assert len(line) == 2
-            assert len(line[0]) == 2
-            assert len(line[1]) == 2
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        lines_result, nlines_result = result
+        assert lines_result.ndim == 3
+        assert lines_result.shape[1:] == (2, 2)
+        assert nlines_result.ndim == 0
 
 
 class TestProbabilisticHoughLineJIT:
@@ -206,7 +211,10 @@ class TestProbabilisticHoughLineJIT:
         rng = jax.random.PRNGKey(42)
         height, width = img.shape
 
-        eager_lines = jax_hough(jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng)
+        eager_result, eager_nlines = jax_hough(
+            jnp.array(img), threshold=10, line_length=30, line_gap=3, rng=rng
+        )
+        eager_lines = jit_result_to_lines(eager_result, eager_nlines)
         lines_result, nlines_result = jit_hough_impl(
             jnp.array(img), 10, 30, 3, theta, rng, height, width
         )
@@ -304,7 +312,7 @@ class TestProbabilisticHoughLineJIT:
         rng = jax.random.PRNGKey(42)
         height, width = horizontal_line.shape
 
-        eager_lines = jax_hough(
+        eager_result, eager_nlines = jax_hough(
             jnp.array(horizontal_line),
             threshold=10,
             line_length=30,
@@ -312,6 +320,7 @@ class TestProbabilisticHoughLineJIT:
             theta=theta,
             rng=rng,
         )
+        eager_lines = jit_result_to_lines(eager_result, eager_nlines)
         lines_result, nlines = jit_hough_impl(
             jnp.array(horizontal_line), 10, 30, 3, theta, rng, height, width
         )

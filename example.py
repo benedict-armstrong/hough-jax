@@ -1,22 +1,5 @@
-# JAX implementation of `probabilistic_hough_line`
+"""Simple example of using hough_jax to detect lines in an image."""
 
-This is a JAX implementation of the `skimage.transform.probabilistic_hough_line` function.
-
-## Installation
-
-```bash
-uv add hough-jax
-```
-
-or if you don't have uv:
-
-```bash
-pip install hough-jax
-```
-
-## Usage
-
-```python
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -38,5 +21,7 @@ lines, nlines = probabilistic_hough_line(
 # lines: Array of shape (lines_max, 2, 2) with endpoints [[x0, y0], [x1, y1]]
 # nlines: Number of valid lines detected
 print(f"Detected {int(nlines)} line(s)")
-print(f"First line endpoints: {lines[0]}")
-```
+for i in range(int(nlines)):
+    x0, y0 = lines[i, 0]
+    x1, y1 = lines[i, 1]
+    print(f"  Line {i + 1}: ({int(x0)}, {int(y0)}) -> ({int(x1)}, {int(y1)})")
